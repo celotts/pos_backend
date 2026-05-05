@@ -1,0 +1,38 @@
+server:
+  port: 9090
+
+spring:
+  application:
+    name: pos-api-rest
+  datasource:
+    url: jdbc:postgresql://db:5432/pos_db # Actualizado: nombre de BD 'pos_db'
+    username: admin # Actualizado para coincidir con DB_USER del .env
+    password: admin_password # Actualizado para coincidir con DB_PASSWORD del .env
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: ${JWT_SECRET:======================CelottsJWTSecretDefaultDevKey===========================}
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator # <--- AÑADIDO: Define explícitamente el path base de Actuator
+      exposure:
+        include: "health,info"
+
+logging:
+  level:
+    com.celotts: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG

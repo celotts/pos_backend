@@ -1,0 +1,52 @@
+networks:
+  pos-net:
+    driver: bridge
+    name: ${NETWORK_NAME:-pos-net}
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pos-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT_HOST:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      pos-net:
+        aliases:
+          - pos-db
+    volumes:
+      - db_data:/var/lib/postgresql/data # <--- CORREGIDO: Ahora referencia a 'db_data'
+      - ./db/init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+
+  app:
+    container_name: pos-app
+    build:
+      context: .
+      dockerfile: Containerfile.app
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT_HOST:-9090}:9090" # <--- CORREGIDO: Mapea el puerto 9090 del host al 9090 del contenedor
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pos-net
+    restart: unless-stopped
+
+volumes:
+  db_data: # <--- CORREGIDO: Ahora el volumen se define como 'db_data'
