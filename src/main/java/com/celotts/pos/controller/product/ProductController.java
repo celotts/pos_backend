@@ -1,7 +1,7 @@
-package com.celotts.pos.controller;
+package com.celotts.pos.controller.product;
 
-import com.celotts.pos.application.port.in.ProductServicePort;
-import com.celotts.pos.domain.model.Product;
+import com.celotts.pos.application.port.in.product.ProductServicePort;
+import com.celotts.pos.domain.model.product.Product;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

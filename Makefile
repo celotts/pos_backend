@@ -12,8 +12,10 @@ BUILD_DIR := $(CURDIR)/.build
 
 # Usaremos podman-compose.yml
 COMPOSE_FILE := podman-compose.yml
-COMPOSE_PROJECT_NAME := pos # Cadena literal fija
-DB_CONTAINER_NAME_FULL := pos-db # Cadena literal fija (se usará para otros comandos, pero no para el healthcheck de DB)
+# CORREGIDO: Usamos printf para asegurar que la cadena sea *exactamente* "pos" sin espacios ni nuevas líneas
+COMPOSE_PROJECT_NAME := $(shell printf "pos")
+# CORREGIDO: Usamos printf para asegurar que la cadena sea *exactamente* "pos-db" sin espacios ni nuevas líneas
+DB_CONTAINER_NAME_FULL := $(shell printf "pos-db")
 
 # ✅ SOLUCIÓN PARA MAC: Detectar el socket de Podman automáticamente
 export DOCKER_HOST ?= unix://$(shell podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')
@@ -72,21 +74,22 @@ define check_health_url
 endef
 
 define print_row
-	NAME=$$(echo $(1) | cut -d':' -f1); \
-	PORT=$$(echo $(1) | cut -d':' -f2); \
-	CONTAINER_FULL_NAME=$(COMPOSE_PROJECT_NAME)-$${NAME}; \
-	RAW_STATUS=$$(podman inspect -f '{{.State.Status}}' $$CONTAINER_FULL_NAME 2>/dev/null || echo "down"); \
-	RAW_HEALTH=$$(podman inspect -f '{{.State.Health.Status}}' $$CONTAINER_FULL_NAME 2>/dev/null || echo "n/a"); \
-	STATUS=$$(echo $$RAW_STATUS | tr '[:lower:]' '[:upper:]'); \
-	HEALTH_VAL=$$(echo $$RAW_HEALTH | tr '[:lower:]' '[:upper:]'); \
-	if [ "$$HEALTH_VAL" = "HEALTHY" ]; then \
-		HEALTH="\033[0;32m$$HEALTH_VAL\033[0m"; \
-	else \
-		HEALTH="\033[0;31m$$HEALTH_VAL\033[0m"; \
-	fi; \
-	printf "| %-20s | %-12s | %-10s | %-24b |\n" "$$NAME" "$$STATUS" "$$PORT" "$$HEALTH"
+	@sh -c '\
+	NAME=$$(echo "$(1)" | cut -d":" -f1); \
+	PORT=$$(echo "$(1)" | cut -d":" -f2); \
+	_CLEAN_PROJECT_NAME=$$(printf "$(COMPOSE_PROJECT_NAME)"); \
+	_CLEAN_SERVICE_NAME=$$(printf "$${NAME}"); \
+	CONTAINER_FULL_NAME=$${_CLEAN_PROJECT_NAME}-$${_CLEAN_SERVICE_NAME}; \
+	RAW_STATUS=$$(podman inspect -f "{{.State.Status}}" "$${CONTAINER_FULL_NAME}" 2>/dev/null || echo "down"); \
+	RAW_HEALTH=$$(podman inspect -f "{{.State.Health.Status}}" "$${CONTAINER_FULL_NAME}" 2>/dev/null || echo "n/a"); \
+	STATUS=$$(echo "$${RAW_STATUS}" | tr "[:lower:]" "[:upper:]"); \
+	HEALTH_VAL=$$(echo "$${RAW_HEALTH}" | tr "[:lower:]" "[:upper:]"); \
+	if [ "$${NAME}" = "db" ] && [ "$${STATUS}" = "RUNNING" ]; then podman exec pos-db pg_isready -U "$(DB_USER)" -d "$(DB_NAME)" >/dev/null 2>&1 && HEALTH_VAL="HEALTHY"; fi; \
+	if [ "$${NAME}" = "app" ] && [ "$${STATUS}" = "RUNNING" ]; then curl -s -o /dev/null -w "%{http_code}" http://localhost:$(APP_PORT_HOST)/actuator/health | grep -q "200" && HEALTH_VAL="HEALTHY"; fi; \
+	if [ "$${HEALTH_VAL}" = "HEALTHY" ]; then HEALTH="\033[0;32m$${HEALTH_VAL}\033[0m"; elif [ "$${HEALTH_VAL}" = "STARTING" ]; then HEALTH="\033[0;33m$${HEALTH_VAL} (VERIFICANDO...)\033[0m"; else HEALTH="\033[0;31m$${HEALTH_VAL}\033[0m"; fi; \
+	printf "| %-20s | %-12s | %-10s | %-24b |\n" "$${NAME}" "$${STATUS}" "$${PORT}" "$${HEALTH}"; \
+	'
 endef
-
 
 #🎯 COMANDOS PRINCIPALES
 #------------------------------------------------------------------------
@@ -144,7 +147,7 @@ up: podman-ready build-images ## 🚀 Levantar servicios (DB y App)
 	@echo "🏗️  Levantando servicios..."
 	$(COMPOSE_LOCAL) up -d
 
-	@echo "⏳ Esperando 30s para que los servicios se estabilicen..."
+	@echo "⏳ Esperando 30s para que los servicios se estabilicen..." # AUMENTADO EL TIEMPO DE ESPERA
 	@sleep 30
 
 	@$(MAKE) health
@@ -190,13 +193,9 @@ podman-ready:
 	@podman machine ls >/dev/null 2>&1 || { echo "🚨 ERROR: Podman machine no responde."; exit 1; }
 
 health: podman-ready ## 💚 Verificación de salud completa
-	@echo "DEBUG: COMPOSE_PROJECT_NAME is '$(COMPOSE_PROJECT_NAME)'"
-	@echo "DEBUG: DB_CONTAINER_NAME_FULL is '$(DB_CONTAINER_NAME_FULL)'"
-	@echo "DEBUG: DB_USER is '$(DB_USER)'"
-	@echo "DEBUG: DB_NAME is '$(DB_NAME)'"
 	@echo "🩺 Verificación de salud..."
 	@echo "🔍 Base de datos (pg_isready):"
-	# CORREGIDO: Hardcodeamos el nombre del contenedor para evitar el problema del espacio
+	# Hardcodeamos el nombre del contenedor para evitar el problema del espacio
 	@DB_HEALTH_CMD="podman exec pos-db pg_isready -U \"$(DB_USER)\" -d \"$(DB_NAME)\""; \
 	echo "DEBUG: Ejecutando comando de salud de DB: $$DB_HEALTH_CMD"; \
 	bash -c "$$DB_HEALTH_CMD" && echo "   ✅ Base de Datos" || echo "   ❌ Base de Datos"

@@ -1,8 +1,8 @@
-package com.celotts.pos.application.service;
+package com.celotts.pos.application.service.product;
 
-import com.celotts.pos.application.port.in.ProductServicePort;
-import com.celotts.pos.application.port.out.ProductRepositoryPort;
-import com.celotts.pos.domain.model.Product;
+import com.celotts.pos.application.port.in.product.ProductServicePort;
+import com.celotts.pos.application.port.out.product.ProductRepositoryPort;
+import com.celotts.pos.domain.model.product.Product;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

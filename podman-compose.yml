@@ -44,6 +44,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck: # <--- AÑADIDO: Healthcheck para la aplicación
+      test: ["CMD-SHELL", "curl -f http://localhost:9090/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s # <--- AUMENTADO: Más tiempo para que la app se vuelva Healthy
     networks:
       - pos-net
     restart: unless-stopped

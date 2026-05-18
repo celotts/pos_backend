@@ -1,6 +1,6 @@
-package com.celotts.pos.infrastructure.adapter.persistence.repository;
+package com.celotts.pos.infrastructure.adapter.persistence.repository.product;
 
-import com.celotts.pos.infrastructure.adapter.persistence.entity.ProductEntity;
+import com.celotts.pos.infrastructure.adapter.persistence.entity.product.ProductEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

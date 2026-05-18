@@ -1,24 +1,15 @@
-package com.celotts.pos.infrastructure.adapter.persistence.entity;
+package com.celotts.pos.domain.model.product;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import java.math.BigDecimal;
 
-@Entity
-@Table(name = "products")
-public class ProductEntity {
-    @Id
+public class Product {
     private String id;
     private String name;
     private String description;
     private BigDecimal price;
     private int stock;
 
-    public ProductEntity() {
-    }
-
-    public ProductEntity(String id, String name, String description, BigDecimal price, int stock) {
+    public Product(String id, String name, String description, BigDecimal price, int stock) {
         this.id = id;
         this.name = name;
         this.description = description;

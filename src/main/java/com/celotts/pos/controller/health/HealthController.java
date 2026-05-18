@@ -1,4 +1,4 @@
-package com.celotts.pos.controller;
+package com.celotts.pos.controller.health;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;

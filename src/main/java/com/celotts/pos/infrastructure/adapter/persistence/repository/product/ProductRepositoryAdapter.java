@@ -1,9 +1,9 @@
-package com.celotts.pos.infrastructure.adapter.persistence;
+package com.celotts.pos.infrastructure.adapter.persistence.repository.product;
 
-import com.celotts.pos.application.port.out.ProductRepositoryPort;
-import com.celotts.pos.domain.model.Product;
-import com.celotts.pos.infrastructure.adapter.persistence.entity.ProductEntity;
-import com.celotts.pos.infrastructure.adapter.persistence.repository.SpringDataProductRepository;
+import com.celotts.pos.application.port.out.product.ProductRepositoryPort;
+import com.celotts.pos.domain.model.product.Product;
+import com.celotts.pos.infrastructure.adapter.persistence.entity.product.ProductEntity;
+import com.celotts.pos.infrastructure.adapter.persistence.repository.product.SpringDataProductRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
