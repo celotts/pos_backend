@@ -38,18 +38,18 @@ services:
     env_file:
       - .env
     ports:
-      - "${APP_PORT_HOST:-9090}:9090" # <--- CORREGIDO: Mapea el puerto 9090 del host al 9090 del contenedor
+      - "${APP_PORT_HOST:-9090}:8080" # <--- CORREGIDO: Mapea el puerto 9090 del host al 8080 del contenedor
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
       db:
         condition: service_healthy
-    healthcheck: # <--- AÑADIDO: Healthcheck para la aplicación
-      test: ["CMD-SHELL", "curl -f http://localhost:9090/actuator/health || exit 1"]
+    healthcheck: # <--- MODIFICADO: Ahora verifica el contenido de la respuesta
+      test: ["CMD-SHELL", "curl -s http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"] # <--- PUERTO INTERNO CORREGIDO
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 60s # <--- AUMENTADO: Más tiempo para que la app se vuelva Healthy
+      start_period: 60s # <--- Mantenemos el tiempo, ya que ahora el test es más preciso
     networks:
       - pos-net
     restart: unless-stopped

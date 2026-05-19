@@ -1,5 +1,5 @@
 server:
-  port: 9090
+  port: 8080 # Cambiado el puerto a 8080
 
 spring:
   application:
@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://db:5432/pos_db # Actualizado: nombre de BD 'pos_db'
     username: admin # Actualizado para coincidir con DB_USER del .env
-    password: admin_password # Actualizado para coincidir con DB_PASSWORD del .env
+    password: admin_password_123 # <--- CORREGIDO: Contraseña actualizada
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

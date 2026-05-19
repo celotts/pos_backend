@@ -58,38 +58,37 @@ endif
 
 # Funciones de health check adaptadas
 define check_health_url
-	@count=0; \
-	echo "   🔍 Verificando salud en $(1)..."; \
-	HEALTH_CURL_CMD="curl -v $(1)"; \
-	until $${HEALTH_CURL_CMD}; [ $$? -eq 0 ]; do \
-		count=$$((count + 1)); \
-		if [ $$count -ge 30 ]; then \
-			echo "   ❌ ERROR: $(2) nunca arrancó en la URL $(1)"; \
-			exit 1; \
-		fi; \
-		echo "   ⏳ $(2) está iniciando... (intento $$count/30)"; \
-		sleep 5; \
-		done; \
-		echo "   ✅ $(2) está UP y respondiendo!"
+    @count=0; \
+    echo "   🔍 Verificando salud en $(1)..."; \
+    HEALTH_CURL_CMD="curl -v $(1)"; \
+    until $${HEALTH_CURL_CMD}; [ $$? -eq 0 ]; do \
+       count=$$((count + 1)); \
+       if [ $$count -ge 30 ]; then \
+          echo "   ❌ ERROR: $(2) nunca arrancó en la URL $(1)"; \
+          exit 1; \
+       fi; \
+       echo "   ⏳ $(2) está iniciando... (intento $$count/30)"; \
+       sleep 5; \
+       done; \
+       echo "   ✅ $(2) está UP y respondiendo!"
 endef
 
+# ✅ MACRO AGREGADA Y CALIBRADA: Extrae el estado real de Podman y lo alinea con tus cabeceras
 define print_row
-	@sh -c '\
-	NAME=$$(echo "$(1)" | cut -d":" -f1); \
+	@NAME=$$(echo "$(1)" | cut -d":" -f1); \
 	PORT=$$(echo "$(1)" | cut -d":" -f2); \
-	_CLEAN_PROJECT_NAME=$$(printf "$(COMPOSE_PROJECT_NAME)"); \
-	_CLEAN_SERVICE_NAME=$$(printf "$${NAME}"); \
-	CONTAINER_FULL_NAME=$${_CLEAN_PROJECT_NAME}-$${_CLEAN_SERVICE_NAME}; \
+	CONTAINER_FULL_NAME="$(COMPOSE_PROJECT_NAME)-$${NAME}"; \
 	RAW_STATUS=$$(podman inspect -f "{{.State.Status}}" "$${CONTAINER_FULL_NAME}" 2>/dev/null || echo "down"); \
 	RAW_HEALTH=$$(podman inspect -f "{{.State.Health.Status}}" "$${CONTAINER_FULL_NAME}" 2>/dev/null || echo "n/a"); \
 	STATUS=$$(echo "$${RAW_STATUS}" | tr "[:lower:]" "[:upper:]"); \
 	HEALTH_VAL=$$(echo "$${RAW_HEALTH}" | tr "[:lower:]" "[:upper:]"); \
-	if [ "$${NAME}" = "db" ] && [ "$${STATUS}" = "RUNNING" ]; then podman exec pos-db pg_isready -U "$(DB_USER)" -d "$(DB_NAME)" >/dev/null 2>&1 && HEALTH_VAL="HEALTHY"; fi; \
-	if [ "$${NAME}" = "app" ] && [ "$${STATUS}" = "RUNNING" ]; then curl -s -o /dev/null -w "%{http_code}" http://localhost:$(APP_PORT_HOST)/actuator/health | grep -q "200" && HEALTH_VAL="HEALTHY"; fi; \
-	if [ "$${HEALTH_VAL}" = "HEALTHY" ]; then HEALTH="\033[0;32m$${HEALTH_VAL}\033[0m"; elif [ "$${HEALTH_VAL}" = "STARTING" ]; then HEALTH="\033[0;33m$${HEALTH_VAL} (VERIFICANDO...)\033[0m"; else HEALTH="\033[0;31m$${HEALTH_VAL}\033[0m"; fi; \
-	printf "| %-20s | %-12s | %-10s | %-24b |\n" "$${NAME}" "$${STATUS}" "$${PORT}" "$${HEALTH}"; \
-	'
+	if [ "$${HEALTH_VAL}" = "HEALTHY" ]; then COLOR_START="\033[0;32m"; \
+	elif [ "$${HEALTH_VAL}" = "STARTING" ]; then COLOR_START="\033[0;33m"; \
+	else COLOR_START="\033[0;31m"; fi; \
+	COLOR_END="\033[0m"; \
+	printf "| %-20s | %-12s | %-10s | $${COLOR_START}%-24s$${COLOR_END} |\n" "$${CONTAINER_FULL_NAME}" "$${STATUS}" "$${PORT}" "$${HEALTH_VAL}"
 endef
+
 
 #🎯 COMANDOS PRINCIPALES
 #------------------------------------------------------------------------
@@ -97,7 +96,6 @@ endef
 help: ## 📚 Muestra esta ayuda
 	@echo "Uso: make <comando>"
 	@echo ""
-	@echo "Comandos principales:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 
@@ -125,17 +123,17 @@ podman-auth: ## 🔑 Autenticar y asegurar imagen base
 	@echo "==========================================================================================================================================================================="
 	-@podman logout docker.io > /dev/null 2>&1
 	@if [ -n "$(DOCKER_USERNAME)" ] && [ -n "$(DOCKER_PASSWORD)" ]; then \
-		echo "Iniciando sesión en docker.io como $(DOCKER_USERNAME)..."; \
-		echo "$(DOCKER_PASSWORD)" | podman login docker.io -u "$(DOCKER_USERNAME)" --password-stdin --authfile $(BUILD_DIR)/config.json || echo "⚠️ Login fallido (continuando sin login)..."; \
-	else \
-		echo "⚠️ No se encontraron credenciales en .env. Saltando login."; \
-	fi
+       echo "Iniciando sesión en docker.io como $(DOCKER_USERNAME)..."; \
+       echo "$(DOCKER_PASSWORD)" | podman login docker.io -u "$(DOCKER_USERNAME)" --password-stdin --authfile $(BUILD_DIR)/config.json || echo "⚠️ Login fallido (continuando sin login)..."; \
+    else \
+       echo "⚠️ No se encontraron credenciales en .env. Saltando login."; \
+    fi
 	@echo "📥 Asegurando imagen base Java 21..."
 	@if [ -f "$(BUILD_DIR)/config.json" ]; then \
-		podman pull eclipse-temurin:21-jdk-alpine --authfile $(BUILD_DIR)/config.json || echo "⚠️ Error descarga imagen base (puede que ya exista)"; \
-	else \
-		podman pull eclipse-temurin:21-jdk-alpine || echo "⚠️ Error descarga imagen base (puede que ya exista)"; \
-	fi
+       podman pull eclipse-temurin:21-jdk-alpine --authfile $(BUILD_DIR)/config.json || echo "⚠️ Error descarga imagen base (puede que ya exista)"; \
+    else \
+       podman pull eclipse-temurin:21-jdk-alpine || echo "⚠️ Error descarga imagen base (puede que ya exista)"; \
+    fi
 	@echo "✅ Imagen base Java 21 lista."
 
 #🚀 DESPLIEGUE
@@ -147,21 +145,45 @@ up: podman-ready build-images ## 🚀 Levantar servicios (DB y App)
 	@echo "🏗️  Levantando servicios..."
 	$(COMPOSE_LOCAL) up -d
 
-	@echo "⏳ Esperando 30s para que los servicios se estabilicen..." # AUMENTADO EL TIEMPO DE ESPERA
-	@sleep 30
+	@echo "⏳ Esperando que la base de datos esté saludable..."
+	@count=0; \
+    until [ "$$(podman inspect -f '{{.State.Health.Status}}' $(COMPOSE_PROJECT_NAME)-db 2>/dev/null || echo "n/a")" = "healthy" ]; do \
+       count=$$((count + 1)); \
+       if [ $$count -ge 10 ]; then \
+          echo "   ❌ ERROR: Base de datos nunca se volvió saludable."; \
+          exit 1; \
+       fi; \
+       echo "   ⏳ Base de datos está iniciando... (intento $$count/10)"; \
+       sleep 5; \
+    done; \
+    echo "   ✅ Base de datos está saludable."
+
+	@echo "⏳ Esperando que la aplicación esté saludable..."
+	@count=0; \
+    until [ "$$(podman inspect -f '{{.State.Health.Status}}' $(COMPOSE_PROJECT_NAME)-app 2>/dev/null || echo "n/a")" = "healthy" ]; do \
+       count=$$((count + 1)); \
+       if [ $$count -ge 13 ]; then \
+          echo "   ❌ ERROR: Aplicación nunca se volvió saludable."; \
+          exit 1; \
+       fi; \
+       echo "   ⏳ Aplicación está iniciando... (intento $$count/13)"; \
+       sleep 5; \
+    done; \
+    echo "   ✅ Aplicación está saludable."
 
 	@$(MAKE) health
 
 	@echo ""
 	@echo "========================================================================"
 	@echo "                RESUMEN FINAL DE DESPLIEGUE"
-	@printf "| %-20s | %-12s | %-10s | %-24b |\n" "SERVICIO" "ESTADO" "PUERTO" "HEALTH"
+	@echo "========================================================================"
+	@printf "| %-20s | %-12s | %-10s | %-24s |\n" "SERVICIO" "ESTADO" "PUERTO" "HEALTH"
 
 	@echo "--------------------------- BASES DE DATOS -----------------------------"
-	@$(call print_row,db:$(DB_PORT_HOST));
+	$(call print_row,db:$(DB_PORT_HOST))
 
 	@echo "-------------------------- APLICACIÓN ----------------------------------"
-	@$(call print_row,app:$(APP_PORT_HOST));
+	$(call print_row,app:$(APP_PORT_HOST))
 
 	@echo "========================================================================"
 	@echo "✅ Proceso completado exitosamente."
@@ -189,7 +211,6 @@ fix-line-endings:
 	$(Q) dos2unix $(MAKEFILE_LIST) 2>/dev/null || true # Limpiar el propio Makefile
 
 podman-ready:
-	@echo "⚙️ Verificando Podman..."
 	@podman machine ls >/dev/null 2>&1 || { echo "🚨 ERROR: Podman machine no responde."; exit 1; }
 
 health: podman-ready ## 💚 Verificación de salud completa
@@ -197,8 +218,8 @@ health: podman-ready ## 💚 Verificación de salud completa
 	@echo "🔍 Base de datos (pg_isready):"
 	# Hardcodeamos el nombre del contenedor para evitar el problema del espacio
 	@DB_HEALTH_CMD="podman exec pos-db pg_isready -U \"$(DB_USER)\" -d \"$(DB_NAME)\""; \
-	echo "DEBUG: Ejecutando comando de salud de DB: $$DB_HEALTH_CMD"; \
-	bash -c "$$DB_HEALTH_CMD" && echo "   ✅ Base de Datos" || echo "   ❌ Base de Datos"
+    echo "DEBUG: Ejecutando comando de salud de DB: $$DB_HEALTH_CMD"; \
+    bash -c "$$DB_HEALTH_CMD" && echo "   ✅ Base de Datos" || echo "   ❌ Base de Datos"
 
 	@echo "🔍 Aplicación (Health Actuator):"
 	$(call check_health_url,http://localhost:$(APP_PORT_HOST)/actuator/health,Aplicación POS)
