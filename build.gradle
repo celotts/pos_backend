@@ -27,6 +27,14 @@ dependencies {
 	implementation 'org.postgresql:postgresql'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator' // AÑADIDO: Spring Boot Actuator
 	
+	// Spring Security para autenticación y autorización
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	// JJWT para JSON Web Tokens (con versión especificada)
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+	
 	// DevTools: Reinicio automático al detectar cambios
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	

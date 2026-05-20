@@ -20,8 +20,15 @@ public class ProductService implements ProductServicePort {
 
     @Override
     public Product createProduct(Product product) {
-        if (product.getId() == null || product.getId().isEmpty()) {
-            product.setId(UUID.randomUUID().toString());
+        // Records son inmutables. Si el ID es nulo, creamos una nueva instancia con un ID generado.
+        if (product.id() == null || product.id().isEmpty()) {
+            product = new Product(
+                UUID.randomUUID().toString(),
+                product.name(),
+                product.description(),
+                product.price(),
+                product.stock()
+            );
         }
         return productRepositoryPort.save(product);
     }
@@ -39,11 +46,15 @@ public class ProductService implements ProductServicePort {
     @Override
     public Product updateProduct(String id, Product updatedProduct) {
         return productRepositoryPort.findById(id).map(existingProduct -> {
-            existingProduct.setName(updatedProduct.getName());
-            existingProduct.setDescription(updatedProduct.getDescription());
-            existingProduct.setPrice(updatedProduct.getPrice());
-            existingProduct.setStock(updatedProduct.getStock());
-            return productRepositoryPort.save(existingProduct);
+            // Records son inmutables. Creamos una nueva instancia con los campos actualizados.
+            Product productToSave = new Product(
+                existingProduct.id(), // El ID no cambia
+                updatedProduct.name(),
+                updatedProduct.description(),
+                updatedProduct.price(),
+                updatedProduct.stock()
+            );
+            return productRepositoryPort.save(productToSave);
         }).orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
 

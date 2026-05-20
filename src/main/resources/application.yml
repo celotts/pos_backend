@@ -22,7 +22,10 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          secret-key: ${JWT_SECRET:======================CelottsJWTSecretDefaultDevKey===========================}
+          # secret-key: ${JWT_SECRET:======================CelottsJWTSecretDefaultDevKey===========================} # Eliminado de aquí
+          # La clave secreta ahora se define globalmente para el aplicación JWT
+          # y se inyecta en JwtService.java
+          # Si necesitas una clave específica para oauth2, deberías reevaluar su uso aquí.
 
 management:
   endpoints:
@@ -36,3 +39,9 @@ logging:
     com.celotts: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:======================CelottsJWTSecretDefaultDevKey===========================} # Clave secreta para firmar JWTs (debe ser fuerte y Base64)
+      expiration: 3600000 # Duración del token en milisegundos (1 hora = 3600000 ms)

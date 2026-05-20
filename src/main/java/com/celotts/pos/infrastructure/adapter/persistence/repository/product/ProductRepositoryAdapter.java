@@ -44,16 +44,18 @@ public class ProductRepositoryAdapter implements ProductRepositoryPort {
     }
 
     private ProductEntity toEntity(Product product) {
+        // Product es un record, usa los métodos de acceso directos (id(), name(), etc.)
         return new ProductEntity(
-                product.getId(),
-                product.getName(),
-                product.getDescription(),
-                product.getPrice(),
-                product.getStock()
+                product.id(),
+                product.name(),
+                product.description(),
+                product.price(),
+                product.stock()
         );
     }
 
     private Product toDomain(ProductEntity productEntity) {
+        // ProductEntity NO es un record, usa los getters tradicionales (getId(), getName(), etc.)
         return new Product(
                 productEntity.getId(),
                 productEntity.getName(),

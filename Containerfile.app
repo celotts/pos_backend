@@ -17,14 +17,8 @@ COPY src ./src
 # Ensure dos2unix is available in the image
 RUN apk add --no-cache dos2unix
 
-# AÑADIDO: Instalar curl para el healthcheck
+# Instalar curl para el healthcheck
 RUN apk add --no-cache curl
-
-# DEBUG: Clean and print the content of application.yml to verify it's the correct one and properly formatted
-RUN dos2unix src/main/resources/application.yml \
-    && echo "--- Content of application.yml after dos2unix ---" \
-    && cat src/main/resources/application.yml \
-    && echo "-------------------------------------------------" # <--- MODIFICADO PARA DEPURACIÓN Y LIMPIEZA
 
 # Build the application
 RUN ./gradlew bootJar
